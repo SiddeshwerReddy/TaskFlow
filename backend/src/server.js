@@ -1,9 +1,7 @@
-import dotenv from 'dotenv';
+import 'dotenv/config'; // Load environment variables before other imports
 import app from './app.js';
 import { connectDB } from './config/db.js';
-
-// Load environment variables from .env file
-dotenv.config();
+import { jobQueue } from './queues/jobQueue.js'; // Ensure queue connects on startup
 
 const PORT = process.env.PORT || 5000;
 
