@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import authRoutes from './routes/authRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
 
 export default app;
