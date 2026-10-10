@@ -60,6 +60,16 @@ services:
     command: npm run worker
     restart: on-failure
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: taskflow-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: on-failure
+
 volumes:
   mongodb_data:
   redis_data:
