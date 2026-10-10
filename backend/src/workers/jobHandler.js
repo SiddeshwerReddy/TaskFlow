@@ -3,16 +3,25 @@ import { processEmail } from './processors/emailProcessor.js';
 import { processReport } from './processors/reportProcessor.js';
 import { processImage } from './processors/imageProcessor.js';
 import { processSimulation } from './processors/simulationProcessor.js';
+import { publishJobUpdate } from './eventPublisher.js';
 
 export const jobHandler = async (job) => {
   console.log(`[Worker] Picked up job ${job.id} of type ${job.name}`);
 
   // 1. Mark job as processing in MongoDB
-  await JobModel.findByIdAndUpdate(job.id, {
-    status: 'processing',
-    startedAt: new Date(),
-    attempts: job.attemptsMade + 1,
-  });
+  const updatedJob = await JobModel.findByIdAndUpdate(
+    job.id, 
+    {
+      status: 'processing',
+      startedAt: new Date(),
+      attempts: job.attemptsMade + 1,
+    },
+    { new: false } // Get the old doc to extract userId quickly
+  );
+
+  if (updatedJob) {
+    publishJobUpdate(updatedJob.userId, job.id, 'processing');
+  }
 
   try {
     let result;

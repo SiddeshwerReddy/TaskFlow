@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Plus, RefreshCw, XCircle, RotateCcw } from 'lucide-react';
+import { io } from 'socket.io-client';
 import CreateJobModal from '../components/CreateJobModal';
 import api from '../api/axios';
+import { AuthContext } from '../context/AuthContext';
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -23,6 +25,7 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function Dashboard() {
+  const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,11 +41,26 @@ export default function Dashboard() {
     }
   };
 
+  // Real-time WebSocket connection
   useEffect(() => {
-    fetchJobs();
-    const intervalId = setInterval(fetchJobs, 3000);
-    return () => clearInterval(intervalId);
-  }, []);
+    fetchJobs(); // Initial fetch
+    
+    if (!user) return;
+
+    // Connect to Socket.io server
+    const socket = io('http://localhost:5000', {
+      query: { userId: user.id }
+    });
+
+    socket.on('job-updated', (update) => {
+      console.log('Real-time job update received:', update);
+      // We can directly mutate the specific job in state, 
+      // but re-fetching ensures perfect sync for simplicity
+      fetchJobs();
+    });
+
+    return () => socket.disconnect();
+  }, [user]);
 
   const handleJobCreated = () => {
     fetchJobs();

@@ -4,6 +4,7 @@ import { connectDB } from '../config/db.js';
 import { redisConnectionOptions } from '../config/redis.js';
 import { jobHandler } from './jobHandler.js';
 import JobModel from '../models/Job.js';
+import { publishJobUpdate } from './eventPublisher.js';
 
 const QUEUE_NAME = 'taskflow-jobs';
 
@@ -22,15 +23,20 @@ const startWorker = async () => {
   // Listen to Global Worker Events to update MongoDB
   worker.on('completed', async (job, result) => {
     console.log(`[Worker] Job ${job.id} completed successfully`);
-    await JobModel.findByIdAndUpdate(job.id, {
+    const updatedJob = await JobModel.findByIdAndUpdate(job.id, {
       status: 'completed',
       result,
       completedAt: new Date(),
-    });
+    }, { new: false });
+    
+    if (updatedJob) {
+      publishJobUpdate(updatedJob.userId, job.id, 'completed', result);
+    }
   });
 
   worker.on('failed', async (job, err) => {
     const isRetrying = job.attemptsMade < job.opts.attempts;
+    const finalStatus = isRetrying ? 'retrying' : 'failed';
 
     if (isRetrying) {
       console.log(
@@ -42,11 +48,15 @@ const startWorker = async () => {
       );
     }
 
-    await JobModel.findByIdAndUpdate(job.id, {
-      status: isRetrying ? 'retrying' : 'failed',
+    const updatedJob = await JobModel.findByIdAndUpdate(job.id, {
+      status: finalStatus,
       error: err.message,
       attempts: job.attemptsMade,
-    });
+    }, { new: false });
+    
+    if (updatedJob) {
+      publishJobUpdate(updatedJob.userId, job.id, finalStatus, null, err.message);
+    }
   });
 
   worker.on('error', (err) => {
