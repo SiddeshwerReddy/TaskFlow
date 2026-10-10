@@ -30,13 +30,22 @@ const startWorker = async () => {
   });
 
   worker.on('failed', async (job, err) => {
-    console.log(`[Worker] Job ${job.id} failed: ${err.message}`);
-    // If it has retries left, BullMQ will retry it. Otherwise, it fails completely.
     const isRetrying = job.attemptsMade < job.opts.attempts;
+
+    if (isRetrying) {
+      console.log(
+        `[Worker] Job ${job.id} failed (Attempt ${job.attemptsMade}/${job.opts.attempts}). Retrying soon... Error: ${err.message}`
+      );
+    } else {
+      console.log(
+        `[Worker] Job ${job.id} failed completely after ${job.attemptsMade} attempts: ${err.message}`
+      );
+    }
 
     await JobModel.findByIdAndUpdate(job.id, {
       status: isRetrying ? 'retrying' : 'failed',
       error: err.message,
+      attempts: job.attemptsMade,
     });
   });
 
@@ -45,6 +54,17 @@ const startWorker = async () => {
   });
 
   console.log(`[Worker] Listening for jobs on queue: ${QUEUE_NAME}`);
+
+  // Graceful Shutdown Logic
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n[${signal}] Received. Closing worker gracefully...`);
+    await worker.close(); // Waits for active jobs to finish
+    console.log('[Worker] BullMQ Worker closed.');
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 };
 
 startWorker();
