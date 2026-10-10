@@ -72,3 +72,78 @@ export const listJobs = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const cancelJob = async (req, res) => {
+  try {
+    const jobRecord = await Job.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!jobRecord) return res.status(404).json({ message: 'Job not found' });
+
+    if (['completed', 'failed', 'cancelled'].includes(jobRecord.status)) {
+      return res
+        .status(400)
+        .json({ message: `Cannot cancel a job with status: ${jobRecord.status}` });
+    }
+
+    // Try to remove from BullMQ
+    if (jobRecord.bullJobId) {
+      const bullJob = await jobQueue.getJob(jobRecord.bullJobId);
+      if (bullJob) {
+        const state = await bullJob.getState();
+        if (state === 'active') {
+          return res
+            .status(400)
+            .json({ message: 'Job is currently processing and cannot be cancelled directly.' });
+        }
+        await bullJob.remove(); // Removes it from waiting/delayed queues
+      }
+    }
+
+    jobRecord.status = 'cancelled';
+    await jobRecord.save();
+
+    res.json({ message: 'Job cancelled successfully', job: jobRecord });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const retryJob = async (req, res) => {
+  try {
+    const jobRecord = await Job.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!jobRecord) return res.status(404).json({ message: 'Job not found' });
+
+    if (jobRecord.status !== 'failed' && jobRecord.status !== 'cancelled') {
+      return res
+        .status(400)
+        .json({ message: 'Only failed or cancelled jobs can be manually retried' });
+    }
+
+    let bullJob = null;
+    if (jobRecord.bullJobId) {
+      bullJob = await jobQueue.getJob(jobRecord.bullJobId);
+    }
+
+    if (bullJob && (await bullJob.getState()) === 'failed') {
+      // Natively retry the failed BullMQ job
+      await bullJob.retry();
+      jobRecord.status = 'queued';
+      jobRecord.attempts = 0;
+      jobRecord.error = undefined;
+      await jobRecord.save();
+    } else {
+      // If it was removed from Redis or cancelled before executing, recreate it in BullMQ
+      bullJob = await jobQueue.add(jobRecord.type, jobRecord.data, {
+        jobId: jobRecord._id.toString(),
+      });
+      jobRecord.bullJobId = bullJob.id;
+      jobRecord.status = 'queued';
+      jobRecord.attempts = 0;
+      jobRecord.error = undefined;
+      await jobRecord.save();
+    }
+
+    res.json({ message: 'Job queued for retry', job: jobRecord });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
