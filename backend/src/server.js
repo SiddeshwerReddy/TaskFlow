@@ -17,8 +17,9 @@ const startServer = async () => {
   // Initialize Socket.io
   const io = new Server(httpServer, {
     cors: {
-      origin: '*', // For dev, allow all origins
-      methods: ['GET', 'POST']
+      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      methods: ['GET', 'POST'],
+      credentials: true
     }
   });
 
