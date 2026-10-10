@@ -10,6 +10,7 @@ export default [
         process: "readonly",
         console: "readonly",
         setTimeout: "readonly",
+        fetch: "readonly",
       }
     },
     rules: {
