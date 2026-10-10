@@ -18,6 +18,8 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@bull-board/api": "^9.10.4",
+    "@bull-board/express": "^9.10.4",
     "bcryptjs": "^3.0.3",
     "bullmq": "^6.3.12",
     "cors": "^2.8.6",
