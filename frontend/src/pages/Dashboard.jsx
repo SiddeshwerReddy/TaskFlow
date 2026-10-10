@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, XCircle, RotateCcw } from 'lucide-react';
 import CreateJobModal from '../components/CreateJobModal';
 import api from '../api/axios';
 
@@ -38,17 +38,32 @@ export default function Dashboard() {
     }
   };
 
-  // Initial fetch and automatic background polling
   useEffect(() => {
     fetchJobs();
-    
-    // Poll every 3 seconds to mimic real-time updates (Real Socket.io comes in Day 15)
     const intervalId = setInterval(fetchJobs, 3000);
     return () => clearInterval(intervalId);
   }, []);
 
   const handleJobCreated = () => {
-    fetchJobs(); // Instantly refresh table when new job is submitted
+    fetchJobs();
+  };
+
+  const handleCancel = async (jobId) => {
+    try {
+      await api.post(`/jobs/${jobId}/cancel`);
+      fetchJobs();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to cancel job');
+    }
+  };
+
+  const handleRetry = async (jobId) => {
+    try {
+      await api.post(`/jobs/${jobId}/retry`);
+      fetchJobs();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to retry job');
+    }
   };
 
   return (
@@ -87,6 +102,7 @@ export default function Dashboard() {
                   <th className="p-4 font-semibold text-gray-600 text-sm">Type</th>
                   <th className="p-4 font-semibold text-gray-600 text-sm">Status</th>
                   <th className="p-4 font-semibold text-gray-600 text-sm">Created At</th>
+                  <th className="p-4 font-semibold text-gray-600 text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -97,6 +113,31 @@ export default function Dashboard() {
                     <td className="p-4 text-sm"><StatusBadge status={job.status} /></td>
                     <td className="p-4 text-sm text-gray-500">
                       {new Date(job.createdAt).toLocaleString()}
+                    </td>
+                    <td className="p-4 text-sm text-gray-500">
+                      <div className="flex gap-3">
+                        {['queued', 'retrying'].includes(job.status) && (
+                          <button 
+                            onClick={() => handleCancel(job._id)}
+                            className="text-red-500 hover:text-red-700 flex items-center gap-1 text-xs font-medium transition-colors"
+                            title="Cancel Job"
+                          >
+                            <XCircle size={16} /> Cancel
+                          </button>
+                        )}
+                        {['failed', 'cancelled'].includes(job.status) && (
+                          <button 
+                            onClick={() => handleRetry(job._id)}
+                            className="text-blue-500 hover:text-blue-700 flex items-center gap-1 text-xs font-medium transition-colors"
+                            title="Retry Job"
+                          >
+                            <RotateCcw size={16} /> Retry
+                          </button>
+                        )}
+                        {['processing', 'completed'].includes(job.status) && (
+                          <span className="text-gray-300 text-xs">-</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
