@@ -1,6 +1,18 @@
 import Redis from 'ioredis';
 
-const redisUrl = process.env.REDIS_URI || process.env.REDIS_URL;
+let redisUrl = process.env.REDIS_URI || process.env.REDIS_URL;
+
+if (redisUrl) {
+  // Extract clean redis:// or rediss:// URL if user pasted CLI command or extra flags
+  const match = redisUrl.match(/(rediss?:\/\/[^\s'"@]+@[^\s'"]+)/) || redisUrl.match(/(rediss?:\/\/[^\s'"]+)/);
+  if (match) {
+    redisUrl = match[match.length - 1];
+  }
+  // Upstash requires rediss:// (with double 's' for TLS)
+  if (redisUrl.includes('upstash.io') && redisUrl.startsWith('redis://')) {
+    redisUrl = redisUrl.replace('redis://', 'rediss://');
+  }
+}
 
 export const redisConnectionOptions = redisUrl
   ? {
