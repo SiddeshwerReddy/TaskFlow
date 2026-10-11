@@ -39,6 +39,7 @@ services:
       - REDIS_PORT=6379
       - JWT_SECRET=taskflow_docker_super_secret_key_123
       - FRONTEND_URL=http://localhost:8080
+      - START_WORKER=false
     depends_on:
       - mongodb
       - redis

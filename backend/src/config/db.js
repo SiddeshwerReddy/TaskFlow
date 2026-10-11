@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 export const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return;
   try {
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskflow';
     const conn = await mongoose.connect(uri);

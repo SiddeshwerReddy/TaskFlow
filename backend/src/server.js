@@ -59,6 +59,12 @@ const startServer = async () => {
   httpServer.listen(PORT, () => {
     console.log(`Server (HTTP & WebSocket) is running on port ${PORT}`);
   });
+
+  // Auto-start integrated background worker (default for cloud web services so jobs run 24/7)
+  if (process.env.START_WORKER !== 'false') {
+    console.log('[Server] Starting integrated BullMQ background worker...');
+    import('./workers/worker.js');
+  }
 };
 
 startServer();
