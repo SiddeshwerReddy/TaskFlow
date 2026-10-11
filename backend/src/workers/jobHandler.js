@@ -16,7 +16,7 @@ export const jobHandler = async (job) => {
       startedAt: new Date(),
       attempts: job.attemptsMade + 1,
     },
-    { new: false } // Get the old doc to extract userId quickly
+    { returnDocument: 'before' }
   );
 
   if (updatedJob) {

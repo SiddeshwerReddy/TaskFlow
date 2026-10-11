@@ -27,7 +27,7 @@ const startWorker = async () => {
       status: 'completed',
       result,
       completedAt: new Date(),
-    }, { new: false });
+    }, { returnDocument: 'before' });
     
     if (updatedJob) {
       publishJobUpdate(updatedJob.userId, job.id, 'completed', result);
@@ -52,7 +52,7 @@ const startWorker = async () => {
       status: finalStatus,
       error: err.message,
       attempts: job.attemptsMade,
-    }, { new: false });
+    }, { returnDocument: 'before' });
     
     if (updatedJob) {
       publishJobUpdate(updatedJob.userId, job.id, finalStatus, null, err.message);
