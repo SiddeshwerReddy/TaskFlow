@@ -18,7 +18,7 @@ const startServer = async () => {
   // Initialize Socket.io
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:8080'] : '*',
+      origin: (origin, callback) => callback(null, true),
       methods: ['GET', 'POST'],
       credentials: true
     }

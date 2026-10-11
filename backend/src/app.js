@@ -7,23 +7,9 @@ import { setupBullBoard } from './config/bullBoard.js';
 
 const app = express();
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://localhost:8080'
-].filter(Boolean);
-
-// Middleware
+// Middleware - Allow all origins dynamically with credentials (Vercel, Localhost, etc.)
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like health checks, Postman, curl)
-    if (!origin) return callback(null, true);
-    // Allow if FRONTEND_URL is not configured or matches allowed list
-    if (!process.env.FRONTEND_URL || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
